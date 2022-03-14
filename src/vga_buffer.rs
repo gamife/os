@@ -51,7 +51,7 @@ impl ColorCode {
 
 /// A screen character in the VGA text buffer, consisting of an ASCII character and a `ColorCode`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(C)]
+#[repr(C)] // 保证  field 的顺序
 struct ScreenChar {
     ascii_character: u8,
     color_code: ColorCode,
@@ -63,7 +63,7 @@ const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
 
 /// A structure representing the VGA text buffer.
-#[repr(transparent)]
+#[repr(transparent)] // 将Buffer等价于 chars这个数组, 只能用于a single non-zero-sized field(包括额外的zero-sized fields)
 struct Buffer {
     chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
@@ -169,3 +169,30 @@ pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
 }
+
+
+
+    
+#[test_case]
+fn test_println_simple() {
+    println!("test_println_simple output");
+} 
+
+#[test_case]
+fn test_println_many() {
+    for _ in 0..200 {
+        println!("test_println_many output");
+    }
+}
+
+#[test_case]
+fn test_println_output() {
+    let s = "Some test string that fits on a single line";
+    println!("{}", s);
+    for (i, c) in s.chars().enumerate() {
+        // println会换行, 所以出现在第二行
+        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
+        assert_eq!(char::from(screen_char.ascii_character), c);
+    }
+}
+
